@@ -326,7 +326,7 @@ function Selling()
 							if inputid and inputid[1] then
 								if inputid[1] == v then  
 									_.inBasket = false Sell.Basket[_] = nil TriggerServerEvent("vineyard:server:setupItems", "add", _.Item, v)	
-								elseo
+								else
 									Sell.Basket[_] = Sell.Basket[_] - inputid[1] TriggerServerEvent("vineyard:server:setupItems", "add", _.Item, inputid[1]) 
 								end
 								Wait(100)

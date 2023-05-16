@@ -24,7 +24,7 @@
 ```
 
 Example:
-![IMAGES](https://imgur.com/a/uorNlZf)
+https://imgur.com/a/uorNlZf
 
 4. Go to your qb-inventory/html/js/app.js and add this:
 
@@ -35,7 +35,7 @@ Example:
 ```
 
 Example:
-![IMAGES](https://imgur.com/a/jBaMd1Z)
+https://imgur.com/a/jBaMd1Z
 
 ## Metadata
 
@@ -47,4 +47,4 @@ Example:
 ```
 
 Example:
-![IMAGES](https://imgur.com/a/oVZoAIN)
+https://imgur.com/a/oVZoAIN

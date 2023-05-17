@@ -42,12 +42,12 @@ local Translations = {
 		header = "Revente",
 		addtobasket = "Ajouter au panier",
 		removetobasket = "Retirer du panier",
+		itemsheader = "Items",
 		basketheader = "Paniers",
 		nothinginbasket = "Vous avez rien dans votre panier",
 		noitemtoaddtobasket = "Vous avez aucun item à ajouter dans votre panier",
 		beginselling = "Débuter la revente",
-		storevehicledrawtext = "[E] - Ranger le véhicule" ,
-		interactiontoped = "Bonjour,"
+		storevehicledrawtext = "[E] - Ranger le véhicule"
 	},
 	error = {
 		vehicleinarea = "Il y a un véhicule dans les alentours",

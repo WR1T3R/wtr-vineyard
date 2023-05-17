@@ -147,7 +147,7 @@ function GetAct()
 				onSelect = function()
 					local input = lib.inputDialog(Lang:t("info.header"), {
 						{type = 'checkbox', label = Lang:t("info.blipsinfo")},
-						{type = 'checkbox', label = Lang:t("info.lightninginfo")},
+						{type = 'checkbox', label = Lang:t("info.lightinginfo")},
 						{type = "slider", label = Lang:t("info.amountbasket"), icon = "fas-fa-circle-check", required = true, min = 1, max = #Shared.VineZone[i]}
 					})
 					if not input then return lib.showContext("actm") end
@@ -170,7 +170,7 @@ function GetAct()
 		end
 	else
 		if Act.Blips then tbl = "🟢" else tbl = "🔴" end if Act.Particles then tbp = "🟢" else tbp = "🔴" end
-		local label = string.format("%s [%d/%d]\n%s [%s]\n%s [%s]", Lang:t("info.basketharvested"), Act.Progression, Act.AmountNeeded, Lang:t("info.blipsinfo"), tbl, Lang:t("info.lightninginfo"), tbp)
+		local label = string.format("%s [%d/%d]\n%s [%s]\n%s [%s]", Lang:t("info.basketharvested"), Act.Progression, Act.AmountNeeded, Lang:t("info.blipsinfo"), tbl, Lang:t("info.lightinginfo"), tbp)
 		local actstarted = {id = "actstarted", title = Lang:t("activity.headerstarted"), options = {}}
 		actm.options[#actm.options + 1] = {title = label, icon = "fas fa-hands"}
 		if not Act.Finished then
@@ -280,33 +280,49 @@ end)
 
 function Selling()
 	local selling = {id = "selling", title = Lang:t("sell.header"), options = {}}
-	local count = 0
-	for i = 1, #Shared.Selling.ItemsAvailable do
-		local cfg = Shared.Selling.ItemsAvailable
-		if QBCore.Functions.HasItem(cfg[i].Item, 1) then
-			count = count + 1
-			selling.options[#selling.options + 1] = {
-				title = QBCore.Shared.Items[cfg[i].Item].label,
-				icon = string.format("nui://%s/html/images/%s.png", Shared.Inventory.Export, cfg[i].Item),
-				onSelect = function()
-					QBCore.Functions.TriggerCallback("vineyard:server:getItemCount", function(result)
-						local input = lib.inputDialog(Lang:t("sell.addtobasket"), {
-							{type = "slider", label = Lang:t("info.amountchoose"), icon = "fas-fa-circle-check", required = true, min = 1, max = result}
-						})
-						if not input then Wait(100) lib.showContext("selling") end
-						if input and input[1] then
-							cfg[i].inBasket = true
-							TriggerServerEvent("vineyard:server:setupItems", "remove", cfg[i].Item, input[1])
-							if not Sell.Basket[cfg[i]] then Sell.Basket[cfg[i]] = input[1] else Sell.Basket[cfg[i]] = Sell.Basket[cfg[i]] + input[1] end
-							Wait(100)
-							Selling()
+	selling.options[#selling.options + 1] = {
+		title = Lang:t("sell.itemsheader"),
+		icon = "fas fa-shopping-cart",
+		onSelect = function()
+			local count = 0
+			local itemsbasket = {id = "itemsbasket", title = Lang:t("sell.itemsheader"), options = {}}
+			for i = 1, #Shared.Selling.ItemsAvailable do
+				local cfg = Shared.Selling.ItemsAvailable
+				if QBCore.Functions.HasItem(cfg[i].Item, 1) then
+					count = count + 1
+					itemsbasket.options[#itemsbasket.options + 1] = {
+						title = QBCore.Shared.Items[cfg[i].Item].label,
+						icon = string.format("nui://%s/html/images/%s.png", Shared.Inventory.Export, cfg[i].Item),
+						onSelect = function()
+							QBCore.Functions.TriggerCallback("vineyard:server:getItemCount", function(result)
+								local input = lib.inputDialog(Lang:t("sell.addtobasket"), {
+									{type = "slider", label = Lang:t("info.amountchoose"), icon = "fas-fa-circle-check", required = true, min = 1, max = result}
+								})
+								if not input then Wait(100) lib.showContext("selling") end
+								if input and input[1] then
+									cfg[i].inBasket = true
+									TriggerServerEvent("vineyard:server:setupItems", "remove", cfg[i].Item, input[1])
+									if not Sell.Basket[cfg[i]] then Sell.Basket[cfg[i]] = input[1] else Sell.Basket[cfg[i]] = Sell.Basket[cfg[i]] + input[1] end
+									Wait(100)
+									Selling()
+								end
+							end, cfg[i].Item)
 						end
-					end, cfg[i].Item)
+					}
+				end
+			end
+			if count == 0 then itemsbasket.options[#itemsbasket.options + 1] = {title = Lang:t("sell.noitemtoaddtobasket"), icon = "fas fa-circle-xmark"} end
+			itemsbasket.options[#itemsbasket.options + 1] = {
+				title = Lang:t("info.returninfo"),
+				icon = "fas fa-rotate-left",
+				onSelect = function()
+					lib.showContext("selling")
 				end
 			}
+			lib.registerContext(itemsbasket)
+			lib.showContext("itemsbasket")
 		end
-	end
-	if count == 0 then selling.options[#selling.options + 1] = {title = Lang:t("sell.noitemtoaddtobasket"), icon = "fas fa-circle-xmark"} end
+	}
 	selling.options[#selling.options + 1] = {
 		title = Lang:t("sell.basketheader"),
 		icon = "fas fa-shopping-cart",
@@ -446,9 +462,6 @@ function EnterSellingZone()
 	DoScreenFadeIn(3000)
 	TaskGoStraightToCoord(PlayerPedId(), -1910.37, -572.81, 19.1, 1.0, 8000, 49.31, 0.0)
 	Wait(5100)
-	for i = 1, 150, 1 do
-		Draw3DText(vector3(-1912.86, -571.03, 19.6), Lang:t("sell.interactiontoped").." "..PlayerData.charinfo.firstname.." "..PlayerData.charinfo.lastname)
-	end
 	for _, v in pairs(PlayerData.items) do
 		if v.name == "vy-sellingbox" then
 			TriggerServerEvent("vineyard:server:setupItems", "remove", "vy-sellingbox", 1, nil, v.slot)

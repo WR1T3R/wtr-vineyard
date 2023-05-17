@@ -1,3 +1,9 @@
+## Dependencies
+1. qb-core
+2. qb-inventory
+3. ox-lib
+4. Pre-configured on dolu's vineyard mapping
+
 ## Inventory
 
 1. Go to your qb-inventory/html/images and the images from images folder

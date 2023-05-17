@@ -523,24 +523,6 @@ function UnloadComponents()
 	Act.Finished = false
 end
 
-function Draw3DText(coords, str)
-    local onScreen, worldX, worldY = World3dToScreen2d(coords.x, coords.y, coords.z)
-    local camCoords = GetGameplayCamCoord()
-    local scale = 200 / (GetGameplayCamFov() * #(camCoords - coords))
-    if onScreen then
-        SetTextScale(1.0, 0.5 * scale)
-        SetTextFont(4)
-        SetTextColour(255, 255, 255, 255)
-        SetTextEdge(2, 0, 0, 0, 150)
-        SetTextProportional(1)
-        SetTextOutline()
-        SetTextCentre(1)
-        BeginTextCommandDisplayText("STRING")
-        AddTextComponentSubstringPlayerName(str)
-        EndTextCommandDisplayText(worldX, worldY)
-    end
-end
-
 AddEventHandler('gameEventTriggered', function(name, args)
 	local player = args[1]
 	if not player then return end

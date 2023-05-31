@@ -15,8 +15,8 @@ Shared.Keys = {
 }
 
 Shared.Blips = {
-	Starter = {Enabled = true, Sprite = 792, Colour = 5, Name = "Vignoble"},
-	Activity = {Sprite = 270, Colour = 58, Name = "Récolte"}
+	Starter = {Enabled = true, Sprite = 792, Colour = 5, Name = "Vineyard"},
+	Activity = {Sprite = 270, Colour = 58, Name = "Harvest"}
 }
 
 Shared.Transformation = {
@@ -66,7 +66,7 @@ Shared.Selling = {
 	},
 	PedModel = "ig_bestmen",
 	Vehicle = {Model = "mesa3", Coords = vector4(-1918.3, 2056.65, 140.48, 257.54)},
-	Blips = {Sprite = 478, Colour = 16, Name = "Lieu de revente"},
+	Blips = {Sprite = 478, Colour = 16, Name = "Selling spot"},
 	ResellEmplacement = {Coords = {-1134.24, 2683.12, 18.34}, Size = {0.30000000000001, 1.3, 2.4}, Rotation = 42.5}
 }
 

@@ -1,8 +1,9 @@
 ## Dependencies
 1. qb-core
 2. qb-inventory
-3. ox-lib
-4. Pre-configured on dolu's vineyard mapping
+3. ox_lib
+4. ox_target
+5. Pre-configured on dolu's vineyard mapping
 
 ## Inventory
 

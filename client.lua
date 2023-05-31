@@ -2,7 +2,7 @@ local QBCore = exports["qb-core"]:GetCoreObject()
 local PlayerData = QBCore.Functions.GetPlayerData()
 local Act = {Started = false, Current = nil, AmountNeeded = 0, Progression = 0, Vehicle = nil, Blips = false, Particles = false, Finished = false}
 local Loaded = {Props = {}, Blips = {}, Particles = {}}
-local Sell = {Basket = {}, Vehicle = nil, ActStarted = false, CurrentPos = nil, SellBlip = nil, SellBlipPoints = nil}
+local Sell = {Basket = {}, Vehicle = nil, ActStarted = false, CurrentPos = nil, SellBlip = nil, SellBlipPoints = nil, SellZones = nil}
 function LoadStart()
 	local coords = Shared.Ped.Coords
 	local model = type(Shared.Ped.Model) == "string" and joaat(Shared.Ped.Model) or Shared.Ped.Model
@@ -29,106 +29,102 @@ function LoadStart()
 		SetCurrentPedWeapon(starter, "weapon_minigun", true)
 		SetPedCanBeTargetted(starter, false)
 	end
-	exports["qb-target"]:AddTargetEntity(starter, {
-		options = {
-			{
-				action = function()
-					GetAct()
-				end,
-				icon = "fas fa-circle-check",
-				label = Lang:t("targets.activity"),
-				canInteract = function()
-					if Sell.ActStarted then return false else return true end
-				end
-			},
-			{
-				action = function()
-					Selling()
-				end,
-				icon = "fas fa-car",
-				label = Lang:t("targets.sell"),
-				canInteract = function()
-					if Shared.Module.Selling then
-						if Sell.ActStarted then
-							return false
-						else
-							return true
-						end
-					end
-				end,
-			}
+	local optpeds = {
+		{
+			name = 'getAct:localentity',
+			event = "vineyard:client:getAct",
+			icon = "fas fa-circle-check",
+			label = Lang:t("targets.activity"),
+			canInteract = function()
+				if Sell.ActStarted then return false else return true end
+			end
 		},
-		distance = 5.0,
-  	})
+		{
+			name = 'selling:localentity',
+			event = "vineyard:client:getSelling",
+			icon = "fas fa-car",
+			label = Lang:t("targets.sell"),
+			canInteract = function()
+				if Shared.Module.Selling then
+					if Sell.ActStarted or Act.Started then
+						return false
+					else
+						return true
+					end
+				end
+			end
+		}
+	}
+	exports.ox_target:addLocalEntity(starter, optpeds)
 	for _, v in pairs(Shared.Transformation.Places) do
-		exports['qb-target']:AddBoxZone("Transfo".._, v.Coords, v.Length, v.Width, {
-			name = "Transfo".._,
-			heading = v.Coords[4],
-			debugPoly = false,
-			minZ = v.minZ,
-			maxZ = v.maxZ,
-			}, {
+		exports.ox_target:addBoxZone({
+			coords = vec3(v.Coords[1], v.Coords[2], v.Coords[3]),
+			size = vec3(v.Size[1], v.Size[2], v.Size[3]),
+			rotation = v.Rotation,
+			debug = false,
 			options = {
-			{
-				action = function()
-					local cfg = Shared.Transformation.Transformation
-					local transformation = {id = "transformation", title = Lang:t("transformation.header"), options = {}}
-					for i = 1, #cfg do
-						transformation.options[#transformation.options + 1] = {
-							title = QBCore.Shared.Items[cfg[i].ItemReceived].label,
-							description = string.format("%s %dx %s", Lang:t("transformation.cost"), cfg[i].Cost.Amount, string.lower(QBCore.Shared.Items[cfg[i].Cost.Item].label)),
-							icon = string.format("nui://%s/html/images/%s.png", Shared.Inventory.Export, cfg[i].ItemReceived),
-							onSelect = function()
-								local input = lib.inputDialog(QBCore.Shared.Items[cfg[i].ItemReceived].label, {
-									{type = "slider", label = Lang:t("info.amountchoose"), icon = "fas-fa-circle-check", required = true, min = 1, max = Shared.Transformation.MaxInput}
-								})
-								if not input then return lib.showContext("transformation") end
-								QBCore.Functions.TriggerCallback("vineyard:server:getItemCount", function(check)
-									QBCore.Functions.TriggerCallback("vineyard:server:getItemWeight", function(result)
-										if QBCore.Functions.HasItem(cfg[i].Cost.Item, (cfg[i].Cost.Amount * input[1])) then
-											if result then
-												if lib.progressCircle({
-													label = Lang:t("transformation.progressbar"),
-													duration = 5000,
-													position = 'bottom',
-													useWhileDead = false,
-													canCancel = true,
-													disable = {
-														move = true,
-													},
-													anim = {
-														dict = Shared.Transformation.Animation.Dict,
-														clip = Shared.Transformation.Animation.Clip
-													},
-												}) then 
-													TriggerServerEvent("vineyard:server:setupItems", "remove", cfg[i].Cost.Item, (cfg[i].Cost.Amount * input[1]))
-													TriggerServerEvent("vineyard:server:setupItems", "add", cfg[i].ItemReceived, input[1])
-												end
-											end
-										else
-											QBCore.Functions.Notify(string.format("%s (%dx %s)", Lang:t("error.notenoughitems"), tonumber((cfg[i].Cost.Amount * input[1]) - check), string.lower(QBCore.Shared.Items[cfg[i].Cost.Item].label)), "error")
-										end
-									end, cfg[i].ItemReceived, input[1])
-								end, cfg[i].Cost.Item)
-							end
-						}
+				{
+					name = 'transfo'.._,
+					event = 'vineyard:client:setTransfo',
+					icon = "fas fa-wine-glass",
+					label = Lang:t("targets.transformation"),
+					canInteract = function()
+						return Shared.Module.Transformation
 					end
-					lib.registerContext(transformation)
-					lib.showContext("transformation")
-				end,
-				icon = "fas fa-wine-glass",
-				label = Lang:t("targets.transformation"),
-				canInteract = function()
-					return Shared.Module.Transformation
-				end
-			},
-		},
-		distance = 2.5
+				}
+			}
 		})
 	end
 end
 
-function GetAct()
+RegisterNetEvent("vineyard:client:setTransfo", function()
+	local cfg = Shared.Transformation.Transformation
+	local transformation = {id = "transformation", title = Lang:t("transformation.header"), options = {}}
+	for i = 1, #cfg do
+		transformation.options[#transformation.options + 1] = {
+			title = QBCore.Shared.Items[cfg[i].ItemReceived].label,
+			description = string.format("%s %dx %s", Lang:t("transformation.cost"), cfg[i].Cost.Amount, string.lower(QBCore.Shared.Items[cfg[i].Cost.Item].label)),
+			icon = string.format("nui://%s/html/images/%s.png", Shared.Inventory.Export, cfg[i].ItemReceived),
+			onSelect = function()
+				local input = lib.inputDialog(QBCore.Shared.Items[cfg[i].ItemReceived].label, {
+					{type = "slider", label = Lang:t("info.amountchoose"), icon = "fas-fa-circle-check", required = true, min = 1, max = Shared.Transformation.MaxInput}
+				})
+				if not input then return lib.showContext("transformation") end
+				QBCore.Functions.TriggerCallback("vineyard:server:getItemCount", function(check)
+					QBCore.Functions.TriggerCallback("vineyard:server:getItemWeight", function(result)
+						if QBCore.Functions.HasItem(cfg[i].Cost.Item, (cfg[i].Cost.Amount * input[1])) then
+							if result then
+								if lib.progressCircle({
+									label = Lang:t("transformation.progressbar"),
+									duration = 5000,
+									position = 'bottom',
+									useWhileDead = false,
+									canCancel = true,
+									disable = {
+										move = true,
+									},
+									anim = {
+										dict = Shared.Transformation.Animation.Dict,
+										clip = Shared.Transformation.Animation.Clip
+									},
+								}) then 
+									TriggerServerEvent("vineyard:server:setupItems", "remove", cfg[i].Cost.Item, (cfg[i].Cost.Amount * input[1]))
+									TriggerServerEvent("vineyard:server:setupItems", "add", cfg[i].ItemReceived, input[1])
+								end
+							end
+						else
+							QBCore.Functions.Notify(string.format("%s (%dx %s)", Lang:t("error.notenoughitems"), tonumber((cfg[i].Cost.Amount * input[1]) - check), string.lower(QBCore.Shared.Items[cfg[i].Cost.Item].label)), "error")
+						end
+					end, cfg[i].ItemReceived, input[1])
+				end, cfg[i].Cost.Item)
+			end
+		}
+	end
+	lib.registerContext(transformation)
+	lib.showContext("transformation")
+end)
+
+RegisterNetEvent("vineyard:client:getAct", function()
 	if Act.Started then l = Lang:t("activity.headerstarted") else l = Lang:t("activity.header") end
 	local actm = {id = "actm", title = l, options = {}}
 	if not Act.Started then
@@ -147,7 +143,7 @@ function GetAct()
 				onSelect = function()
 					local input = lib.inputDialog(Lang:t("info.header"), {
 						{type = 'checkbox', label = Lang:t("info.blipsinfo")},
-						{type = 'checkbox', label = Lang:t("info.lightinginfo")},
+						{type = 'checkbox', label = Lang:t("info.lightninginfo")},
 						{type = "slider", label = Lang:t("info.amountbasket"), icon = "fas-fa-circle-check", required = true, min = 1, max = #Shared.VineZone[i]}
 					})
 					if not input then return lib.showContext("actm") end
@@ -170,7 +166,7 @@ function GetAct()
 		end
 	else
 		if Act.Blips then tbl = "🟢" else tbl = "🔴" end if Act.Particles then tbp = "🟢" else tbp = "🔴" end
-		local label = string.format("%s [%d/%d]\n%s [%s]\n%s [%s]", Lang:t("info.basketharvested"), Act.Progression, Act.AmountNeeded, Lang:t("info.blipsinfo"), tbl, Lang:t("info.lightinginfo"), tbp)
+		local label = string.format("%s [%d/%d]\n%s [%s]\n%s [%s]", Lang:t("info.basketharvested"), Act.Progression, Act.AmountNeeded, Lang:t("info.blipsinfo"), tbl, Lang:t("info.lightninginfo"), tbp)
 		local actstarted = {id = "actstarted", title = Lang:t("activity.headerstarted"), options = {}}
 		actm.options[#actm.options + 1] = {title = label, icon = "fas fa-hands"}
 		if not Act.Finished then
@@ -195,7 +191,7 @@ function GetAct()
 	end
 	lib.registerContext(actm)
 	lib.showContext("actm")
-end
+end)
 
 RegisterNetEvent("vineyard:client:startAct", function(act, b, part, nb)
   	if not IsAnyVehicleNearPoint(Shared.Vehicle.Coords, 5.0) then
@@ -232,37 +228,18 @@ RegisterNetEvent("vineyard:client:startAct", function(act, b, part, nb)
 			SetEntityAsMissionEntity(props, true, true)
 			FreezeEntityPosition(props, true)
 			Loaded.Props[i] = props
-			exports['qb-target']:AddTargetEntity(props, {
-				options = {
-					{
-						action = function()
-							local reward = Shared.Activity[act].Rewards[math.random(1, #Shared.Activity[act].Rewards)]
-							local amount = math.random(reward.Amount.min, reward.Amount.max)
-							QBCore.Functions.TriggerCallback("vineyard:server:getItemWeight", function(result)
-								if result then
-									Act.Progression = Act.Progression + 1
-									RemoveBlip(Loaded.Blips[i])
-									StopParticleFxLooped(Loaded.Particles[i], 0)
-									DeleteObject(props)
-									lib.showTextUI(string.format("%s %d/%d", Lang:t("activity.progressiondrawtext"), Act.Progression, Act.AmountNeeded), {position = "left-center"})
-									if Act.Progression == Act.AmountNeeded then
-										Act.Finished = true
-										lib.showTextUI(Lang:t("activity.activityfinisheddrawtext"), {position = "left-center"})
-										QBCore.Functions.Notify(Lang:t("activity.finishharvest"), "primary")
-									end
-									if Shared.Module.XP then
-										TriggerServerEvent("vineyard:server:updateXP", false, Shared.XP.XPPerHarvest)
-									end
-									TriggerServerEvent("vineyard:server:setupItems", "add", reward.Item, amount)
-								end
-							end, reward.Item, amount)
-						end,
-						icon = "fas fa-hands",
-						label = Lang:t("targets.harvest"),
-					},
-				},
-				distance = 3.0
-			})
+			local optvine = {
+				{
+					name = 'update:localentity',
+					event = "vineyard:client:updateObject",
+					icon = "fas fa-hands",
+					label = Lang:t("targets.harvest"),
+					act = act,
+					data = i,
+					prop = props,
+				}
+			}
+			exports.ox_target:addLocalEntity(props, optvine)
 			Act.AmountNeeded = nb
 		end
 		QBCore.Functions.SpawnVehicle(Shared.Vehicle.Model, function(veh)
@@ -278,7 +255,30 @@ RegisterNetEvent("vineyard:client:startAct", function(act, b, part, nb)
 	end
 end)
 
-function Selling()
+RegisterNetEvent("vineyard:client:updateObject", function(data)
+	local reward = Shared.Activity[data.act].Rewards[math.random(1, #Shared.Activity[data.act].Rewards)]
+	local amount = math.random(reward.Amount.min, reward.Amount.max)
+	QBCore.Functions.TriggerCallback("vineyard:server:getItemWeight", function(result)
+		if result then
+			Act.Progression = Act.Progression + 1
+			RemoveBlip(Loaded.Blips[data.data])
+			StopParticleFxLooped(Loaded.Particles[data.data], 0)
+			DeleteObject(data.prop)
+			lib.showTextUI(string.format("%s %d/%d", Lang:t("activity.progressiondrawtext"), Act.Progression, Act.AmountNeeded), {position = "left-center"})
+			if Act.Progression == Act.AmountNeeded then
+				Act.Finished = true
+				lib.showTextUI(Lang:t("activity.activityfinisheddrawtext"), {position = "left-center"})
+				QBCore.Functions.Notify(Lang:t("activity.finishharvest"), "primary")
+			end
+			if Shared.Module.XP then
+				TriggerServerEvent("vineyard:server:updateXP", false, Shared.XP.XPPerHarvest)
+			end
+			TriggerServerEvent("vineyard:server:setupItems", "add", reward.Item, amount)
+		end
+	end, reward.Item, amount)
+end)
+
+RegisterNetEvent("vineyard:client:getSelling", function()
 	local selling = {id = "selling", title = Lang:t("sell.header"), options = {}}
 	selling.options[#selling.options + 1] = {
 		title = Lang:t("sell.itemsheader"),
@@ -304,7 +304,7 @@ function Selling()
 									TriggerServerEvent("vineyard:server:setupItems", "remove", cfg[i].Item, input[1])
 									if not Sell.Basket[cfg[i]] then Sell.Basket[cfg[i]] = input[1] else Sell.Basket[cfg[i]] = Sell.Basket[cfg[i]] + input[1] end
 									Wait(100)
-									Selling()
+									TriggerEvent("vineyard:client:getSelling")
 								end
 							end, cfg[i].Item)
 						end
@@ -357,7 +357,7 @@ function Selling()
 			if a == 0 then 
 				basketmenu.options[#basketmenu.options + 1] = {title = Lang:t("sell.nothinginbasket"), icon = "fas fa-circle-xmark"} 
 			else
-				basketmenu.options[#basketmenu.options + 1] = {title = Lang:t("sell.beginselling"), icon = "fas fa-car", onSelect = function() StartSelling() end} 
+				basketmenu.options[#basketmenu.options + 1] = {title = Lang:t("sell.beginselling"), icon = "fas fa-car", onSelect = function() TriggerEvent("vineyard:client:startSelling") end} 
 			end
 			basketmenu.options[#basketmenu.options + 1] = {
 				title = Lang:t("info.returninfo"),
@@ -372,11 +372,11 @@ function Selling()
 	}
 	lib.registerContext(selling)
 	lib.showContext("selling")
-end
+end)
 
-function StartSelling()
+RegisterNetEvent("vineyard:client:startSelling", function()
 	local sellPos = Shared.Selling.ResellEmplacement
-	local sellB, sellBR = AddBlipForCoord(sellPos.Coords.x, sellPos.Coords.y, sellPos.Coords.z), AddBlipForCoord(sellPos.Coords.x, sellPos.Coords.y, sellPos.Coords.z)
+	local sellB, sellBR = AddBlipForCoord(sellPos.Coords[1], sellPos.Coords[2], sellPos.Coords[3]), AddBlipForCoord(sellPos.Coords[1], sellPos.Coords[2], sellPos.Coords[3])
 	local sphere1 = lib.zones.sphere({
 		coords = vec3(Shared.Selling.Vehicle.Coords.x, Shared.Selling.Vehicle.Coords.y, Shared.Selling.Vehicle.Coords.z),
 		radius = 2,
@@ -385,7 +385,7 @@ function StartSelling()
 		onExit = onExitZone
 	})
 	local sphere2 = lib.zones.sphere({
-		coords = vec3(sellPos.Coords.x, sellPos.Coords.y, sellPos.Coords.z),
+		coords = vec3(sellPos.Coords[1], sellPos.Coords[2], sellPos.Coords[3]),
 		radius = 3,
 		debug = false,
 		onEnter = onEnterSellPoints
@@ -417,37 +417,33 @@ function StartSelling()
 		Sell.Vehicle = veh
 		Sell.ActStarted = true
 	end, Shared.Selling.Vehicle.Coords, true)
-	exports['qb-target']:AddBoxZone("ResellObject", sellPos.Coords, sellPos.Length, sellPos.Width, {
-		name = "ResellObject",
-		heading = sellPos.Coords[4],
-		debugPoly = false,
-		minZ = sellPos.minZ,
-		maxZ = sellPos.maxZ,
-	}, {
+	Sell.SellZones = exports.ox_target:addBoxZone({
+		coords = vec3(sellPos.Coords[1], sellPos.Coords[2], sellPos.Coords[3]),
+		size = vec3(sellPos.Size[1], sellPos.Size[2], sellPos.Size[3]),
+		rotation = sellPos.Rotation,
+		debug = false,
 		options = {
 			{
-				action = function()
-					EnterSellingZone()
-				end,
+				name = 'sellingzone',
+				event = 'vineyard:client:enterSellingZone',
 				icon = "fas fa-circle-check",
 				label = Lang:t("targets.entersellingzone"),
 				canInteract = function()
 					if Shared.Module.Selling and Sell.ActStarted and not IsPedInAnyVehicle(PlayerPedId()) then return true end
 				end
-			},
-		},
-		distance = 4.5
+			}
+		}
 	})
-end
+end)
 
-function EnterSellingZone()
+RegisterNetEvent("vineyard:client:enterSellingZone", function()
 	local m = type(Shared.Selling.PedModel) == "string" and joaat(Shared.Selling.PedModel) or Shared.Selling.PedModel
 	local coordsP = GetEntityCoords(PlayerPedId())
 	local headingP = GetEntityHeading(PlayerPedId())
 	local ap = 0
 	local camera = CreateCamWithParams("DEFAULT_SCRIPTED_CAMERA", -1911.96, -568.92, 20.8, -30.0 , 0.0, 190.69, 60.0, false, 0)
 	Sell.CurrentPos = vector4(coordsP[1], coordsP[2], coordsP[3], headingP)
-	exports["qb-target"]:RemoveZone("ResellObject")
+	exports.ox_target:removeZone(Sell.SellZones)
 	DoScreenFadeOut(1300)
 	Wait(1200)
 	SetEntityCoords(PlayerPedId(), -1902.38, -572.73, 18.1, false, false, false, true)
@@ -484,7 +480,7 @@ function EnterSellingZone()
 	DoScreenFadeIn(1000)
 	TaskWarpPedIntoVehicle(PlayerPedId(), Sell.Vehicle, -1)
 	RemoveBlip(Sell.SellBlip)
-end
+end)
 
 function onInsideZone()
 	if Sell.ActStarted then
@@ -492,6 +488,9 @@ function onInsideZone()
 		if IsControlPressed(0, Shared.Keys.StoreVehicle) then
 			DeleteVehicle(Sell.Vehicle)
 			Sell.ActStarted = false
+			Sell.CurrentPos = nil 
+			if Sell.SellBlip then RemoveBlip(Sell.SellBlip) end
+			if Sell.SellBlipPoints then RemoveBlip(Sell.SellBlipPoints) end
 			lib.hideTextUI()
 		end
 	end
@@ -527,8 +526,7 @@ AddEventHandler('gameEventTriggered', function(name, args)
 	local player = args[1]
 	if not player then return end
 	if not IsEntityDead(PlayerPedId()) then return end
-	UnloadComponents()
-	QBCore.Functions.Notify(Lang:t("error.deathevent"), "error")
+	if Act.Started or Sell.ActStarted then UnloadComponents() QBCore.Functions.Notify(Lang:t("error.deathevent"), "error") end
  end)
 
 RegisterNetEvent("QBCore:Player:SetPlayerData", function(newData)

@@ -15,14 +15,20 @@ Shared.Keys = {
 }
 
 Shared.Blips = {
-	Starter = {Enabled = true, Sprite = 792, Colour = 5, Name = "Vineyard"},
-	Activity = {Sprite = 270, Colour = 58, Name = "Harvesting props"}
+	Starter = {Enabled = true, Sprite = 792, Colour = 5, Name = "Vignoble"},
+	Activity = {Sprite = 270, Colour = 58, Name = "Récolte"}
 }
 
 Shared.Transformation = {
 	MaxInput = 10,
 	Animation = {Dict = "missclothing", Clip = "idle_storeclerk"},
-	Places = {{Coords = vector4(-1933.34, 2052.85, 140.81, 345), Length = 1, Width = 1, minZ = 140.01, maxZ = 143.21}},
+	Places = {
+		[1] = {
+			Coords = {-1932.95, 2052.7, 140.5}, 
+			Size = {0.15, 0.5, 0.5}, 
+			Rotation = 345.0
+		}
+	},
 	Transformation = {
 		{ItemReceived = "vy-grapejuice", Cost = {Item = "vy-greengrapes", Amount = 4}},
 		{ItemReceived = "vy-grapejuice", Cost = {Item = "vy-redgrapes", Amount = 8}}
@@ -60,8 +66,8 @@ Shared.Selling = {
 	},
 	PedModel = "ig_bestmen",
 	Vehicle = {Model = "mesa3", Coords = vector4(-1918.3, 2056.65, 140.48, 257.54)},
-	Blips = {Sprite = 478, Colour = 16, Name = "Selling spot"},
-	ResellEmplacement = {Coords = vector4(-1134.24, 2683.12, 18.34, 312), Length = 0.2, Width = 1.4, minZ = 17.54, maxZ = 20.14}
+	Blips = {Sprite = 478, Colour = 16, Name = "Lieu de revente"},
+	ResellEmplacement = {Coords = {-1134.24, 2683.12, 18.34}, Size = {0.30000000000001, 1.3, 2.4}, Rotation = 42.5}
 }
 
 Shared.VineZone = {
